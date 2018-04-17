@@ -7,8 +7,12 @@ void main() => runApp(
   );
 
 class MainApp extends StatefulWidget {
+
+  // get last city set after exiting the app
+  final lastCityIsSet = globals.activeCity; // boolean
+
   @override
-  createState() => MainAppState();
+  createState() => MainAppState(lastCityIsSet);
 }
 
 class MainAppState extends State<MainApp> {
@@ -17,18 +21,22 @@ class MainAppState extends State<MainApp> {
   // if there is an active city show main screen,
   // if not show cityOverview
 
-  String _getActiveCity () {
+  MainAppState(var lastCityIsSet) {
+    hasActiveCity = (lastCityIsSet != '');
+  }
+
+  // check if active city is unset
+  String _getActiveCity() {
     String value;
-
-    (globals.activeCity != '') ?  value = globals.activeCity : value = '';
-
+    (hasActiveCity) ?  value = globals.activeCity : value = '';
     return value;
   }
 
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
-      home: (_getActiveCity() == '') ? new ActiveCity() : new CityOverview(),
+      // use routing for navigation, see bookmark !!!
+      home: (_getActiveCity() != '') ? new ActiveCity() : new CityOverview(),
     );
   }
 }
@@ -40,21 +48,27 @@ class CityOverview extends StatefulWidget {
 }
 
 class CityOverviewState extends State<CityOverview> {
+  var _activeCity;
+
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: null),
+        leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: _goToActiveCity()),
         title: new Text('Saved City Overview'),
       ),
-      // body: _buildSavedCitys,
+      body: _buildSavedCitys(),
     );
+  }
+
+  _goToActiveCity () {
+    globals.activeCity = _activeCity;
   }
 
   Widget _buildSavedCitys() {
     final _biggerFont = const TextStyle(fontSize: 18.0);
 
-    var _activeCity;
+
 
     // load saved citys from db
     // simualated:
@@ -76,6 +90,7 @@ class CityOverviewState extends State<CityOverview> {
             setState(() {
               if (!isActive) {
                 _activeCity = _displayString;
+                globals.activeCity = _displayString;
               } else _activeCity = null;
             });
             // save active city to db
@@ -91,12 +106,14 @@ class CityOverviewState extends State<CityOverview> {
 
         final index = i ~/ 2;
 
-        return _buildRow(
-          new Text(
-            _testCitys[index],
-            style: _biggerFont
-          )
-        );
+        if (index < _testCitys.length) {
+          return _buildRow(
+              new Text(
+                  _testCitys[index],
+                  style: _biggerFont
+              )
+          );
+        }
       }
     );
   }
@@ -108,67 +125,9 @@ class ActiveCity extends StatefulWidget {
 }
 
 class ActiveCityState extends State<ActiveCity> {
-  final _suggestions = <WordPair>[];
   final _biggerFont = const TextStyle(fontSize: 18.0);
 
   var   _active;
-
-  void _gotoOverview() {
-    Navigator.of(context).push(
-      new MaterialPageRoute(
-        builder: (context) {
-          return new Scaffold (
-            appBar: new AppBar(
-                title: new Text('Saved City Overview'),
-            ),
-            body: _buildSuggestions(),
-          );
-        }
-      ),
-     );
-  }
-
-  Widget _buildSuggestions() {
-    return new ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-
-      itemBuilder: (context, i) {
-        if (i.isOdd) return new Divider();
-
-        final index = i ~/ 2;
-
-        if (index >= _suggestions.length) {
-          _suggestions.addAll(generateWordPairs().take(10));
-        }
-
-        return _buildRow(
-          new Text(
-            _suggestions[index].asPascalCase,
-            style: _biggerFont
-          )
-        );
-      }
-    );
-  }
-
-  Widget _buildRow(Text displayText) {
-    final _displayString = displayText.data; // plain text part of the Text-Widget
-    final isActive = (_active == _displayString);
-    return new ListTile(
-      title: displayText,
-      trailing: new Icon(
-        isActive ? Icons.star : Icons.star_border,
-        color: isActive ? Colors.amber : null,
-      ),
-      onTap: () {
-        setState(() {
-          if (!isActive) {
-            _active = _displayString;
-          } else _active = null;
-        });
-      }
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +135,7 @@ class ActiveCityState extends State<ActiveCity> {
       appBar: new AppBar(
         title: new Text('Active City'),
         actions: <Widget>[
-          new IconButton(icon: new Icon(Icons.list), onPressed: _gotoOverview)
+          new IconButton(icon: new Icon(Icons.list), onPressed: null),
         ]
       ),
         body: _active == null ? new Text('No Active City Set') : new Text(_active)

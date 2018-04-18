@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
 import 'globals.dart' as globals;
+
+// ===== ===== ===== =====
+// TODO LIST
+// ----- high prio -----
+// TODO: add input field for city's
+// TODO: add fitting weather API
+// TODO: load weather data for saved city's / give a hint when the city couldn't be found
+// TODO: display data of active city on active city screen
+// ----- ----- ----- -----
+//
+// ----- low prio -----
+// TODO: live search of available citys via the API (if offered)
+// TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
+// ----- ----- ----- -----
+// TODO LIST END
+// ===== ===== ===== =====
 
 void main() => runApp(
     new MainApp()

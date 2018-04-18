@@ -35,8 +35,11 @@ class MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
-      // use routing for navigation, see bookmark !!!
       home: (_getActiveCity() != '') ? new ActiveCity() : new CityOverview(),
+      routes: <String, WidgetBuilder> {
+        '/activeCity':   (BuildContext context) => new ActiveCity(),
+        '/cityOverview': (BuildContext context) => new CityOverview()
+      }
     );
   }
 }
@@ -50,11 +53,19 @@ class CityOverview extends StatefulWidget {
 class CityOverviewState extends State<CityOverview> {
   var _activeCity;
 
+  CityOverviewState () {
+    // read active city
+    _activeCity = globals.activeCity;
+  }
+
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: _goToActiveCity()),
+        // hand over function only like this: '() => funcName()'
+        // with only 'funcName()' the function is called immediately after the builder is finished!
+        // with only 'funcName' the function is not called at all!
+        leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: () => _goToActiveCity()),
         title: new Text('Saved City Overview'),
       ),
       body: _buildSavedCitys(),
@@ -62,16 +73,16 @@ class CityOverviewState extends State<CityOverview> {
   }
 
   _goToActiveCity () {
-    globals.activeCity = _activeCity;
+    // pushNamed would generate a route which can be navigated back
+    // with pushReplacementNamed you basically switch between screens
+    Navigator.of(context).pushReplacementNamed('/activeCity');
   }
 
   Widget _buildSavedCitys() {
     final _biggerFont = const TextStyle(fontSize: 18.0);
 
-
-
     // load saved citys from db
-    // simualated:
+    // simulated:
     final _testCitys = <String>[];
     _testCitys.add('Freiburg');
     _testCitys.add('Berlin');
@@ -89,11 +100,15 @@ class CityOverviewState extends State<CityOverview> {
           onTap: () {
             setState(() {
               if (!isActive) {
+
                 _activeCity = _displayString;
-                globals.activeCity = _displayString;
-              } else _activeCity = null;
+              } else {
+                _activeCity = '';
+
+              }
+              // set active city for screen, but also for globals
+              globals.activeCity = _activeCity;
             });
-            // save active city to db
           }
       );
     }
@@ -125,9 +140,17 @@ class ActiveCity extends StatefulWidget {
 }
 
 class ActiveCityState extends State<ActiveCity> {
-  final _biggerFont = const TextStyle(fontSize: 18.0);
+  var _activeCity;
 
-  var   _active;
+  ActiveCityState() {
+    _activeCity = globals.activeCity;
+  }
+
+  _goToCityOverview() {
+    // pushNamed would generate a route which can be navigated back
+    // with pushReplacementNamed you basically switch between screens
+    Navigator.of(context).pushReplacementNamed('/cityOverview');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +158,13 @@ class ActiveCityState extends State<ActiveCity> {
       appBar: new AppBar(
         title: new Text('Active City'),
         actions: <Widget>[
-          new IconButton(icon: new Icon(Icons.list), onPressed: null),
+          // hand over function only like this: '() => funcName()'
+          // with only 'funcName()' the function is called immediately after the builder is finished!
+          // with only 'funcName' the function is not called at all!
+          new IconButton(icon: new Icon(Icons.list), onPressed: () => _goToCityOverview()),
         ]
       ),
-        body: _active == null ? new Text('No Active City Set') : new Text(_active)
+        body: _activeCity == '' ? new Text('No Active City Set') : new Text(_activeCity)
     );
   }
 }

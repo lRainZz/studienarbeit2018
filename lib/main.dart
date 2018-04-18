@@ -12,7 +12,7 @@ class MainApp extends StatefulWidget {
   final lastCityIsSet = globals.activeCity; // boolean
 
   @override
-  createState() => MainAppState(lastCityIsSet);
+  createState() => MainAppState();
 }
 
 class MainAppState extends State<MainApp> {
@@ -21,11 +21,13 @@ class MainAppState extends State<MainApp> {
   // if there is an active city show main screen,
   // if not show cityOverview
 
-  MainAppState(var lastCityIsSet) {
-    hasActiveCity = (lastCityIsSet != '');
+  // constructor
+  MainAppState() {
+    // reading state from last app start
+    hasActiveCity = (globals.activeCity != '');
   }
 
-  // check if active city is unset
+  // check if active city is set
   String _getActiveCity() {
     String value;
     (hasActiveCity) ?  value = globals.activeCity : value = '';
@@ -35,8 +37,10 @@ class MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
+      // directly goto cityOverview if no activeCity is set
       home: (_getActiveCity() != '') ? new ActiveCity() : new CityOverview(),
-      routes: <String, WidgetBuilder> {
+      // navigation routes for the screens
+        routes: <String, WidgetBuilder> {
         '/activeCity':   (BuildContext context) => new ActiveCity(),
         '/cityOverview': (BuildContext context) => new CityOverview()
       }
@@ -53,6 +57,7 @@ class CityOverview extends StatefulWidget {
 class CityOverviewState extends State<CityOverview> {
   var _activeCity;
 
+  // constructor
   CityOverviewState () {
     // read active city
     _activeCity = globals.activeCity;
@@ -89,24 +94,26 @@ class CityOverviewState extends State<CityOverview> {
     _testCitys.add('Dortmund');
 
     Widget _buildRow(Text displayText) {
-      final _displayString = displayText.data; // plain text part of the Text-Widget
-      final isActive = (_activeCity == _displayString);
+      // comparison with raw string not the object!
+      final isActive = (_activeCity == displayText.data);
+
+      // build single row of list as tile
       return new ListTile(
           title: displayText,
           trailing: new Icon(
             isActive ? Icons.star : Icons.star_border,
             color: isActive ? Colors.amber : null,
           ),
+          // set state, so that the icon will be updated
           onTap: () {
             setState(() {
               if (!isActive) {
-
-                _activeCity = _displayString;
+                 // write raw string into activeCity
+                _activeCity = displayText.data;
               } else {
                 _activeCity = '';
-
               }
-              // set active city for screen, but also for globals
+              // set active city for globals, no matter the outcome
               globals.activeCity = _activeCity;
             });
           }
@@ -114,13 +121,17 @@ class CityOverviewState extends State<CityOverview> {
     }
 
     return new ListView.builder(
+      // set padding for all tiles
       padding: const EdgeInsets.all(16.0),
 
       itemBuilder: (context, i) {
+        // set every other row as divider
         if (i.isOdd) return new Divider();
 
+        // break down index for the actual tiles
         final index = i ~/ 2;
 
+        // add tiles
         if (index < _testCitys.length) {
           return _buildRow(
               new Text(
@@ -142,7 +153,9 @@ class ActiveCity extends StatefulWidget {
 class ActiveCityState extends State<ActiveCity> {
   var _activeCity;
 
+  // constructor
   ActiveCityState() {
+    // load active city
     _activeCity = globals.activeCity;
   }
 

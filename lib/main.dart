@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:english_words/english_words.dart';
 import 'globals.dart' as globals;
 
 // ===== ===== ===== =====
@@ -13,6 +14,7 @@ import 'globals.dart' as globals;
 // ----- low prio -----
 // TODO: live search of available citys via the API (if offered)
 // TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
+// TODO: split classes into different files
 // ----- ----- ----- -----
 // TODO LIST END
 // ===== ===== ===== =====

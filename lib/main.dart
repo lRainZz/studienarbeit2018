@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
 import 'globals.dart' as globals;
+import 'helper.dart';
+
+import 'package:flutter/rendering.dart';
 
 // ===== ===== ===== =====
 // TODO LIST
-// ----- high prio -----
-// TODO: add input field for city's
+// ----- high priority -----
 // TODO: add fitting weather API
+// TODO: add class of 'city' with name an zip code
 // TODO: load weather data for saved city's / give a hint when the city couldn't be found
 // TODO: display data of active city on active city screen
 // ----- ----- ----- -----
 //
-// ----- low prio -----
+// ----- low priority -----
 // TODO: live search of available citys via the API (if offered)
 // TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
+// TODO: change navigation so that screens go from left to right and v.v. instead of bottom up
 // TODO: split classes into different files
 // ----- ----- ----- -----
 // TODO LIST END
@@ -34,20 +37,17 @@ class MainApp extends StatefulWidget {
 
 class MainAppState extends State<MainApp> {
   var hasActiveCity;
-  // load active city from globals
-  // if there is an active city show main screen,
-  // if not show cityOverview
 
   // constructor
   MainAppState() {
     // reading state from last app start
-    hasActiveCity = (globals.activeCity != '');
+    hasActiveCity = (globals.activeCity != null);
   }
 
   // check if active city is set
-  String _getActiveCity() {
-    String value;
-    (hasActiveCity) ?  value = globals.activeCity : value = '';
+  CityData _getActiveCity() {
+    CityData value;
+    (hasActiveCity) ?  value = globals.activeCity : value = null;
     return value;
   }
 
@@ -55,11 +55,11 @@ class MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return new MaterialApp(
       // directly goto cityOverview if no activeCity is set
-      home: (_getActiveCity() != '') ? new ActiveCity() : new CityOverview(),
+      home: (_getActiveCity() != null) ? new ActiveCity() : new CityOverview(),
       // navigation routes for the screens
         routes: <String, WidgetBuilder> {
         '/activeCity':   (BuildContext context) => new ActiveCity(),
-        '/cityOverview': (BuildContext context) => new CityOverview()
+        '/cityOverview': (BuildContext context) => new CityOverview(),
       }
     );
   }
@@ -72,26 +72,94 @@ class CityOverview extends StatefulWidget {
 }
 
 class CityOverviewState extends State<CityOverview> {
-  var _activeCity;
+  CityData       _activeCity;
+  CityData       _cityToAdd;
+  List<CityData> _cityList;
+  bool           _showSearch;
+  List<String>   _apiResults;
+  String         _cityName;
 
   // constructor
   CityOverviewState () {
     // read active city
-    _activeCity = globals.activeCity;
+    _showSearch    = false;
+    _activeCity    = globals.activeCity;
+    _cityList      = globals.savedCitys;
+    _cityToAdd     = null;
+    _apiResults = new List();
+
+    if (_cityList == null) {
+      _cityList = new List();
+    }
+
+    _cityList.add(new CityData(getNewId(), 'Freiburg', 79100));
+    _cityList.add(new CityData(getNewId(), 'Bötzingen', 79268));
   }
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
-        // hand over function only like this: '() => funcName()'
-        // with only 'funcName()' the function is called immediately after the builder is finished!
-        // with only 'funcName' the function is not called at all!
-        leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: () => _goToActiveCity()),
-        title: new Text('Saved City Overview'),
-      ),
-      body: _buildSavedCitys(),
-    );
+    return _buildContent(_showSearch);
+  }
+
+  _buildContent(bool showSearch) {
+    if (!showSearch) {
+      return new Scaffold(
+        appBar: new AppBar(
+          // hand over function only like this: '() => funcName()'
+          // with only 'funcName()' the function is called immediately after the builder is finished!
+          // with only 'funcName' the function is not called at all!
+          leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: () => _goToActiveCity()),
+          title: new Text('Saved City Overview'),
+        ),
+        body: _buildSavedCitys(),
+        floatingActionButton: new FloatingActionButton(
+            elevation: 0.0,
+            child: new Icon(Icons.add),
+            onPressed: () => setState(() {
+              _showSearch = true;
+            }), //() => _showBottomSheet(context)
+        ),
+      );
+    } else {
+      return new Scaffold(
+        appBar: new AppBar(
+          leading: new IconButton(icon: new Icon(Icons.clear), onPressed: () => setState(() {_showSearch = false;})),
+          title: new TextField(
+            style: new TextStyle(
+              color: Colors.white,
+              fontSize: 18.0,
+            ),
+            decoration: new InputDecoration.collapsed(
+              hintStyle: new TextStyle(
+                color: Colors.white30,
+              ),
+              hintText: 'Search City ...',
+            ),
+            onChanged: (cityName) => setState(() {
+              _cityName = cityName;
+            }),
+          ),
+        )
+      );
+    }
+  }
+
+  _addCityToList(BuildContext context) {
+    // check for doubles
+    // change list to object of city (name, plz, etc) for uniques
+
+    if (_cityName != '') {
+      _cityToAdd = new CityData(getNewId(), _cityName, 000); // TODO: add zip code
+      setState(() {
+        _cityList.add(_cityToAdd);
+      });
+
+      globals.savedCitys = _cityList;
+
+      Navigator.pop(context);
+    } else {
+      // TODO: show toast
+    }
   }
 
   _goToActiveCity () {
@@ -100,64 +168,51 @@ class CityOverviewState extends State<CityOverview> {
     Navigator.of(context).pushReplacementNamed('/activeCity');
   }
 
-  Widget _buildSavedCitys() {
-    final _biggerFont = const TextStyle(fontSize: 18.0);
+  _deleteFromList(CityData cityData) {
 
-    // load saved citys from db
-    // simulated:
-    final _testCitys = <String>[];
-    _testCitys.add('Freiburg');
-    _testCitys.add('Berlin');
-    _testCitys.add('Dortmund');
-
-    Widget _buildRow(Text displayText) {
-      // comparison with raw string not the object!
-      final isActive = (_activeCity == displayText.data);
-
-      // build single row of list as tile
-      return new ListTile(
-          title: displayText,
-          trailing: new Icon(
-            isActive ? Icons.star : Icons.star_border,
-            color: isActive ? Colors.amber : null,
-          ),
-          // set state, so that the icon will be updated
-          onTap: () {
-            setState(() {
-              if (!isActive) {
-                 // write raw string into activeCity
-                _activeCity = displayText.data;
-              } else {
-                _activeCity = '';
-              }
-              // set active city for globals, no matter the outcome
-              globals.activeCity = _activeCity;
-            });
-          }
-      );
+    if (_activeCity == cityData) {
+      _activeCity = null;
     }
 
-    return new ListView.builder(
-      // set padding for all tiles
-      padding: const EdgeInsets.all(16.0),
+    if (_cityList.contains(cityData)) {
+      setState(() {
+        _cityList.remove(cityData);
+      });
+    }
 
-      itemBuilder: (context, i) {
-        // set every other row as divider
-        if (i.isOdd) return new Divider();
+    globals.savedCitys = _cityList;
+    globals.activeCity = _activeCity;
+  }
 
-        // break down index for the actual tiles
-        final index = i ~/ 2;
-
-        // add tiles
-        if (index < _testCitys.length) {
-          return _buildRow(
-              new Text(
-                  _testCitys[index],
-                  style: _biggerFont
-              )
-          );
-        }
-      }
+  Widget _buildSavedCitys() {
+    return new ListView(
+      children: _cityList.map((CityData cityData) {
+        return new ListTile(
+            key: new ObjectKey(cityData.id),
+            leading: new Icon(
+              (_activeCity == cityData) ? Icons.star : Icons.star_border,
+              color: (_activeCity == cityData) ? Colors.amber : null,
+            ),
+            title: new Text(cityData.name),
+            trailing: new IconButton(
+              icon: new Icon(Icons.delete_forever),
+              onPressed: () => _deleteFromList(cityData),
+            ),
+            // set state, so that the icon will be updated
+            onTap: () {
+              setState(() {
+                if (!(_activeCity == cityData)) {
+                  // write raw string into activeCity
+                  _activeCity = cityData;
+                } else {
+                  _activeCity = null;
+                }
+                // set active city for globals, no matter the outcome
+                globals.activeCity = _activeCity;
+              });
+            }
+        );
+      }).toList(),
     );
   }
 }
@@ -194,7 +249,7 @@ class ActiveCityState extends State<ActiveCity> {
           new IconButton(icon: new Icon(Icons.list), onPressed: () => _goToCityOverview()),
         ]
       ),
-        body: _activeCity == '' ? new Text('No Active City Set') : new Text(_activeCity)
+        body: _activeCity == null ? new Text('No Active City Set') : new Text(_activeCity.name)
     );
   }
 }

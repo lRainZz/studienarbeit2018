@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import 'globals.dart' as globals;
 import 'helper.dart';
-
-import 'package:flutter/rendering.dart';
 
 // ===== ===== ===== =====
 // TODO LIST
 // ----- high priority -----
-// TODO: add fitting weather API
-// TODO: add class of 'city' with name an zip code
-// TODO: load weather data for saved city's / give a hint when the city couldn't be found
 // TODO: display data of active city on active city screen
+// TODO: credits for apixu
 // ----- ----- ----- -----
 //
 // ----- low priority -----
-// TODO: live search of available citys via the API (if offered)
 // TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
 // TODO: change navigation so that screens go from left to right and v.v. instead of bottom up
 // TODO: split classes into different files
@@ -73,35 +73,118 @@ class CityOverview extends StatefulWidget {
 
 class CityOverviewState extends State<CityOverview> {
   CityData       _activeCity;
-  CityData       _cityToAdd;
   List<CityData> _cityList;
   bool           _showSearch;
-  List<String>   _apiResults;
-  String         _cityName;
+  bool           _isLoading;
+  bool           _noResults;
+  List<CityData> _apiResults;
+  String         _noResultPlaceholder = '';
+
+  final _subject = new PublishSubject<String>();
+  static const API_KEY = '0bc7502d2189494ca7492757182204&q';
 
   // constructor
   CityOverviewState () {
     // read active city
     _showSearch    = false;
+    _isLoading     = false;
+    _noResults     = false;
     _activeCity    = globals.activeCity;
     _cityList      = globals.savedCitys;
-    _cityToAdd     = null;
-    _apiResults = new List();
+    _apiResults    = new List();
 
     if (_cityList == null) {
       _cityList = new List();
     }
 
-    _cityList.add(new CityData(getNewId(), 'Freiburg', 79100));
-    _cityList.add(new CityData(getNewId(), 'Bötzingen', 79268));
+    _subject.stream.debounce(new Duration(milliseconds: 600)).listen(_nameChanged);
+  }
+
+  _nameChanged(String cityName) {
+    if (cityName.isEmpty) {
+      setState(() {
+        _isLoading = false;
+      });
+      _clearList();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    _clearList();
+
+    String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  cityName;
+
+    http.get(requestURL)
+      .then((response) => response.body)
+      .then(json.decode)
+      .then((apiData) {
+
+          // API Error codes: https://www.apixu.com/doc/errors.aspx
+          int errorCode;
+
+          // check if data contains error object
+          // if not do not trigger error handling
+          if (apiData['error'] != null) {
+            errorCode = apiData['error']['code'];
+          } else errorCode = 0;
+
+          // TODO: different actions for different HTTP status codes
+          // handling all possible errors in the same way
+          if ( /*HTTP 400*/ errorCode == 1003 || errorCode == 1005 || errorCode == 1006 || errorCode == 9999 ||
+               /*HTTP 401*/ errorCode == 1002 || errorCode == 2006 ||
+               /*HTTP 403*/ errorCode == 2007 || errorCode == 2008) {
+
+            setState(() {
+              _noResults = true;
+              _noResultPlaceholder = cityName;
+            });
+          } else {
+            _addCity(apiData);
+          }
+        })
+      .catchError(_onError)
+      .then((e) {setState(() {
+          _isLoading = false;
+        });
+      });
+  }
+
+  _onError(dynamic d) {
+    print(d);
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  _clearList() {
+    setState(() {
+      _noResults = false;
+      _noResultPlaceholder = '';
+      _apiResults.clear();
+    });
+  }
+
+  _addCity(dynamic apiCity) {
+    var current  = apiCity['current'];
+    var location = apiCity['location'];
+
+    Weather  weather  = mapWeather(current);
+    CityData cityData = mapCityData(location, weather);
+
+    setState(() {
+      _apiResults.add(cityData);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return _buildContent(_showSearch);
+    return _buildContent(context, _showSearch);
   }
 
-  _buildContent(bool showSearch) {
+  _buildContent(BuildContext context, bool showSearch) {
     if (!showSearch) {
       return new Scaffold(
         appBar: new AppBar(
@@ -122,47 +205,119 @@ class CityOverviewState extends State<CityOverview> {
       );
     } else {
       return new Scaffold(
-        appBar: new AppBar(
-          leading: new IconButton(icon: new Icon(Icons.clear), onPressed: () => setState(() {_showSearch = false;})),
-          title: new TextField(
-            style: new TextStyle(
-              color: Colors.white,
-              fontSize: 18.0,
-            ),
-            decoration: new InputDecoration.collapsed(
-              hintStyle: new TextStyle(
-                color: Colors.white30,
+          appBar: new AppBar(
+            leading: new IconButton(
+                icon: new Icon(Icons.clear), onPressed: () =>
+                setState(() {
+                  _showSearch = false;
+                  _clearList();
+                })),
+            title: new TextField(
+              style: new TextStyle(
+                color: Colors.white,
+                fontSize: 18.0,
               ),
-              hintText: 'Search City ...',
+              decoration: new InputDecoration.collapsed(
+                hintStyle: new TextStyle(
+                  color: Colors.white30,
+                ),
+                hintText: 'Search City ...',
+              ),
+              onChanged: (cityName) => (_subject.add(cityName)),
             ),
-            onChanged: (cityName) => setState(() {
-              _cityName = cityName;
-            }),
           ),
-        )
+          body: _isLoading ? _showLoadingScreen() : new Container(
+              child: new ListView(
+                padding: new EdgeInsets.all(16.0),
+                children: _buildResultList(context, _apiResults),
+              )
+          )
       );
     }
   }
 
-  _addCityToList(BuildContext context) {
+  Widget _showLoadingScreen() {
+    return new Container(
+      child: new CircularProgressIndicator(),
+    );
+  }
+
+  List<Widget> _buildResultList(BuildContext context, List<CityData> apiResults) {
+    if (_noResults) {
+      List<Widget> result = new List<Widget>();
+
+      result.add(
+        new ListTile(
+          leading: new Icon(Icons.cancel),
+          title: new Text(
+            "No Results for '" + _noResultPlaceholder + "'",
+            // style: new TextStyle(color: Colors.white30),
+          ),
+        )
+      );
+
+      return result;
+    }
+
+    return apiResults.map((CityData cityData) {
+      return new ListTile(
+          key: new ObjectKey(cityData.id),
+          leading: new Icon(Icons.search),
+          title: new Text (cityData.name),
+          onTap: () => _addCityToList(context, cityData)
+      );
+    }).toList();
+  }
+
+  bool _isDouble(String cityName) {
+    bool result = false;
+
+    for (CityData city in _cityList) {
+      if (city.name == cityName) {
+        result = true;
+      }
+    }
+
+    return result;
+  }
+
+  _addCityToList(BuildContext context, CityData cityData) {
     // check for doubles
     // change list to object of city (name, plz, etc) for uniques
+    String snackMessage = '';
 
-    if (_cityName != '') {
-      _cityToAdd = new CityData(getNewId(), _cityName, 000); // TODO: add zip code
+    // check doubles and set message
+    if (_isDouble(cityData.name)) {
+
+      snackMessage = "'" + cityData.name + "' is already in your list!";
+
+    } else if (cityData != null) {
+      // check for null (should not happen .. should)
       setState(() {
-        _cityList.add(_cityToAdd);
+        _cityList.add(cityData);
+        _showSearch = false;
       });
 
       globals.savedCitys = _cityList;
 
-      Navigator.pop(context);
+      snackMessage = "'" + cityData.name + "' was added to your city list.";
+
     } else {
-      // TODO: show toast
+      // on error set message
+      snackMessage = "Could't add city to list. Pleas try again";
     }
+      // view snackbar with given message
+      Scaffold.of(context).showSnackBar(
+          new SnackBar(
+              content: new Text(snackMessage)
+          )
+      );
   }
 
   _goToActiveCity () {
+    // clear results for next time
+    _clearList();
+
     // pushNamed would generate a route which can be navigated back
     // with pushReplacementNamed you basically switch between screens
     Navigator.of(context).pushReplacementNamed('/activeCity');
@@ -186,12 +341,13 @@ class CityOverviewState extends State<CityOverview> {
 
   Widget _buildSavedCitys() {
     return new ListView(
+      padding: new EdgeInsets.all(16.0),
       children: _cityList.map((CityData cityData) {
         return new ListTile(
             key: new ObjectKey(cityData.id),
             leading: new Icon(
-              (_activeCity == cityData) ? Icons.star : Icons.star_border,
-              color: (_activeCity == cityData) ? Colors.amber : null,
+              (_activeCity == cityData) ? Icons.check_box : Icons.check_box_outline_blank,
+              color: (_activeCity == cityData) ? Colors.green : null,
             ),
             title: new Text(cityData.name),
             trailing: new IconButton(

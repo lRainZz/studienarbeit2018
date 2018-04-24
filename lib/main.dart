@@ -11,6 +11,8 @@ import 'helper.dart';
 // TODO LIST
 // ----- high priority -----
 // TODO: display data of active city on active city screen
+// TODO: local time for 4 backgrounds (1. sunrise; 2. daytime; 3. (==1.) sunset; 4. nighttime)
+// TODO: useful refresh of data
 // TODO: credits for apixu
 // ----- ----- ----- -----
 //
@@ -238,7 +240,9 @@ class CityOverviewState extends State<CityOverview> {
 
   Widget _showLoadingScreen() {
     return new Container(
-      child: new CircularProgressIndicator(),
+      child: new Center(
+        child: new CircularProgressIndicator()
+      ),
     );
   }
 
@@ -379,7 +383,7 @@ class ActiveCity extends StatefulWidget {
 }
 
 class ActiveCityState extends State<ActiveCity> {
-  var _activeCity;
+  CityData _activeCity;
 
   // constructor
   ActiveCityState() {
@@ -395,17 +399,13 @@ class ActiveCityState extends State<ActiveCity> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold (
-      appBar: new AppBar(
-        title: new Text('Active City'),
-        actions: <Widget>[
-          // hand over function only like this: '() => funcName()'
-          // with only 'funcName()' the function is called immediately after the builder is finished!
-          // with only 'funcName' the function is not called at all!
-          new IconButton(icon: new Icon(Icons.list), onPressed: () => _goToCityOverview()),
-        ]
-      ),
-        body: _activeCity == null ? new Text('No Active City Set') : new Text(_activeCity.name)
+    return new Container(
+      decoration: new BoxDecoration(
+        image: new DecorationImage(
+          image: new AssetImage(''),
+          fit: BoxFit.cover
+        )
+      )
     );
   }
 }

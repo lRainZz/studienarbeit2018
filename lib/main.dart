@@ -11,14 +11,16 @@ import 'helper.dart';
 // TODO LIST
 // ----- high priority -----
 // TODO: display data of active city on active city screen
-// TODO: local time for 4 backgrounds (1. sunrise; 2. daytime; 3. (==1.) sunset; 4. nighttime)
-// TODO: bw background for non set city
 // TODO: swipe to go to city overview
-// TODO: useful refresh of data
+// TODO: useful refresh of data (activeCity changes / pull to refresh)
+// TODO: refresh modal
+// TODO: api timeout
 // TODO: credits for apixu
 // ----- ----- ----- -----
 //
 // ----- low priority -----
+// TODO: setting for imperial / metric units
+// TODO: app logo cross with r-a-i-n lettering
 // TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
 // TODO: change navigation so that screens go from left to right and v.v. instead of bottom up
 // TODO: split classes into different files
@@ -85,7 +87,6 @@ class CityOverviewState extends State<CityOverview> {
   String         _noResultPlaceholder = '';
 
   final _subject = new PublishSubject<String>();
-  static const API_KEY = '0bc7502d2189494ca7492757182204&q';
 
   // constructor
   CityOverviewState () {
@@ -313,11 +314,11 @@ class CityOverviewState extends State<CityOverview> {
       snackMessage = "Could't add city to list. Pleas try again";
     }
       // view snackbar with given message
-      Scaffold.of(context).showSnackBar(
-          new SnackBar(
-              content: new Text(snackMessage)
-          )
-      );
+      // Scaffold.of(context).showSnackBar(
+      //     new SnackBar(
+      //         content: new Text(snackMessage)
+      //     )
+      // );
   }
 
   _goToActiveCity () {
@@ -399,15 +400,116 @@ class ActiveCityState extends State<ActiveCity> {
     Navigator.of(context).pushReplacementNamed('/cityOverview');
   }
 
+  AssetImage getBackground() {
+    String assetName;
+    DateTime localtime;
+    CityData activeCity = globals.activeCity;
+
+    if (activeCity == null) {
+      // no active city set
+      assetName = ASSET_BG_BLACKWHITE;
+    } else {
+      // get current time if active city
+      localtime = DateTime.parse(getTimeSyntaxLeadingZero(activeCity.localtime)); // '2018-04-27 8:08:00'
+
+      if ((localtime.hour > sunriseBegin && localtime.hour < sunriseEnd)
+       || (localtime.hour > sunsetBegin  && localtime.hour < sunsetEnd)) {
+        // between sunrise/sunset time
+        assetName = ASSET_BG_SUNRISE;
+      } else {
+        // not sunrise/sunset
+        // check for day or night
+        activeCity.weather.isDay ? assetName = ASSET_BG_DAYTIME : assetName = ASSET_BG_NIGHTTIKME;
+      }
+    }
+
+    return new AssetImage(assetName);
+  }
+
+  Widget buildContent(CityData activeCity) {
+
+    if (activeCity == null) {
+      // return info and button for cityList
+    } else {
+      return new Column(
+        children: <Widget>[
+          new Padding(
+            padding: new EdgeInsets.only(bottom: 80.0),
+            child: new Row(
+              children: <Widget>[
+                new Expanded(
+                  child: new Align(
+                    child: new InkWell(
+                      child: new Icon(Icons.info, size: 25.0, color: Colors.white),
+                      onTap: null,
+                    ),
+                    alignment: Alignment.centerLeft,
+                  ),
+                ),
+                new Expanded(
+                  child: new Align(
+                    child: new InkWell(
+                      child: new Icon(Icons.list, size: 30.0, color: Colors.white),
+                      onTap: () => _goToCityOverview(),
+                    ),
+                    alignment: Alignment.centerRight,
+                  )
+                ),
+              ],
+            ),
+          ), // Info Button and List Button
+          new Center(
+            child: new Text(
+              activeCity.weather.tempC.toString() + '°',
+              style: new TextStyle(
+                color: Colors.white,
+                fontSize: 75.0
+              ),
+            ),
+          ),
+          new Center(
+              child: new Text(
+                'Feels like ' + activeCity.weather.feelsLikeC.toString() + '°',
+                style: new TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
+                ),
+              )
+          ),
+          new Expanded(
+            child: new Align(
+              alignment: Alignment.bottomCenter,
+              child: buildContentBottom(activeCity),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget buildContentBottom(CityData activeCity) {
+
+    return new Text('Hello World');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return new Container(
-      decoration: new BoxDecoration(
-        image: new DecorationImage(
-          image: new AssetImage(''),
-          fit: BoxFit.cover
+    return new Scaffold(
+        body: new Container(
+            padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 35.0),
+            constraints: new BoxConstraints.expand(
+              // full hd
+              height: 1920.0,
+              width: 1080.0,
+            ),
+            decoration: new BoxDecoration(
+                image: new DecorationImage(
+                    image: getBackground(),
+                    fit: BoxFit.fill
+                )
+            ),
+          child: buildContent(globals.activeCity)
         )
-      )
     );
   }
 }

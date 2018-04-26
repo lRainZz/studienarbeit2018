@@ -12,6 +12,8 @@ import 'helper.dart';
 // ----- high priority -----
 // TODO: display data of active city on active city screen
 // TODO: local time for 4 backgrounds (1. sunrise; 2. daytime; 3. (==1.) sunset; 4. nighttime)
+// TODO: bw background for non set city
+// TODO: swipe to go to city overview
 // TODO: useful refresh of data
 // TODO: credits for apixu
 // ----- ----- ----- -----

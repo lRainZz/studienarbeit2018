@@ -1,5 +1,5 @@
-import 'globals.dart' as globals;
 import 'dart:core';
+import 'globals.dart' as globals;
 
 // constants
 const String API_KEY = '0bc7502d2189494ca7492757182204&q';
@@ -66,18 +66,18 @@ class Weather {
 }
 
 Weather mapWeather(dynamic weatherJSON) {
-  String lastUpdated   = weatherJSON['last_updated'];
-  double tempC         = weatherJSON['temp_c'];
-  double tempF         = weatherJSON['temp_f'];
-  double feelsLikeC    = weatherJSON['feelslike_c'];
-  double feelsLikeF    = weatherJSON['feelslike_f'];
-  bool   isDay         = (weatherJSON['is_day'] == 1);
-  String condition     = weatherJSON['condition']['text'];
-  String conditionIcon = weatherJSON['condition']['icon'];
-  String windDirection = weatherJSON['wind_dir'];
-  double windKph       = weatherJSON['wind_kph'];
-  double windMph       = weatherJSON['wind_mph'];
-  int    humidity      = weatherJSON['humidity'];
+  String lastUpdated   =            weatherJSON['last_updated'];
+  double tempC         =            weatherJSON['temp_c'];
+  double tempF         =            weatherJSON['temp_f'];
+  double feelsLikeC    =            weatherJSON['feelslike_c'];
+  double feelsLikeF    =            weatherJSON['feelslike_f'];
+  bool   isDay         =           (weatherJSON['is_day'] == 1);
+  String condition     =            weatherJSON['condition']['text'];
+  String conditionIcon = 'https:' + weatherJSON['condition']['icon']; // URL must have protocol
+  String windDirection =            weatherJSON['wind_dir'];
+  double windKph       =            weatherJSON['wind_kph'];
+  double windMph       =            weatherJSON['wind_mph'];
+  int    humidity      =            weatherJSON['humidity'];
 
   return new Weather(
     lastUpdated,
@@ -94,6 +94,7 @@ Weather mapWeather(dynamic weatherJSON) {
     humidity
   );
 }
+
 
 CityData mapCityData(dynamic cityDataJSON, Weather weather) {
   int    id        = getNewId();
@@ -120,12 +121,38 @@ String getTimeSyntaxLeadingZero(String timeString) {
   timePart = dateTimeArray[1];
   // position 11 of string must be ':'
   // otherwise a leading 0 is missing!
-  if (timeString[11] != ':') {
+  if (timePart[2] != ':') {
     timeString = datePart + ' 0' + timePart;
   }
 
   return timeString;
 }
+
+String geTimeFromDateTime(String timeString) {
+  return timeString.split(' ')[1];
+}
+
+bool apiCallHasError(apiData) {
+  bool result = true;
+  // API Error codes: https://www.apixu.com/doc/errors.aspx
+  int errorCode;
+
+  // check if data contains error object
+  // if not do not trigger error handling
+  if (apiData['error'] != null) {
+    errorCode = apiData['error']['code'];
+  } else errorCode = 0;
+
+  // handling all possible errors in the same way
+  if (/*HTTP 400*/ errorCode != 1003 && errorCode != 1005 && errorCode != 1006 && errorCode != 9999 &&
+      /*HTTP 401*/ errorCode != 1002 && errorCode != 2006 &&
+      /*HTTP 403*/ errorCode != 2007 && errorCode != 2008) {
+    result = false;
+  }
+
+  return result;
+}
+
 
 int getNewId() {
   int id = globals.currentId;

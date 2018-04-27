@@ -10,19 +10,14 @@ import 'helper.dart';
 // ===== ===== ===== =====
 // TODO LIST
 // ----- high priority -----
-// TODO: display data of active city on active city screen
-// TODO: swipe to go to city overview
-// TODO: useful refresh of data (activeCity changes / pull to refresh)
-// TODO: refresh modal
-// TODO: api timeout
+// TODO: no active city screen
+// TODO: city overview color scheme
 // TODO: credits for apixu
 // ----- ----- ----- -----
 //
 // ----- low priority -----
 // TODO: setting for imperial / metric units
 // TODO: app logo cross with r-a-i-n lettering
-// TODO: nice UI for active city screen (no AppBar, nice background, nice icons etc.)
-// TODO: change navigation so that screens go from left to right and v.v. instead of bottom up
 // TODO: split classes into different files
 // ----- ----- ----- -----
 // TODO LIST END
@@ -325,6 +320,9 @@ class CityOverviewState extends State<CityOverview> {
     // clear results for next time
     _clearList();
 
+    // update data on screen change
+    globals.needsUpdate = true;
+
     // pushNamed would generate a route which can be navigated back
     // with pushReplacementNamed you basically switch between screens
     Navigator.of(context).pushReplacementNamed('/activeCity');
@@ -387,11 +385,27 @@ class ActiveCity extends StatefulWidget {
 
 class ActiveCityState extends State<ActiveCity> {
   CityData _activeCity;
-
   // constructor
   ActiveCityState() {
     // load active city
     _activeCity = globals.activeCity;
+
+    // refresh data
+    if (globals.needsUpdate) {
+
+      String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  _activeCity.name;
+
+      http.get(requestURL)
+          .then((response) => response.body)
+          .then(json.decode)
+          .then((apiData) {
+        if(!apiCallHasError(apiData)) {
+          _updateCity(apiData, _activeCity);
+        }
+      });
+
+      globals.needsUpdate = false;
+    }
   }
 
   _goToCityOverview() {
@@ -400,7 +414,7 @@ class ActiveCityState extends State<ActiveCity> {
     Navigator.of(context).pushReplacementNamed('/cityOverview');
   }
 
-  AssetImage getBackground() {
+  AssetImage _getBackground() {
     String assetName;
     DateTime localtime;
     CityData activeCity = globals.activeCity;
@@ -426,90 +440,261 @@ class ActiveCityState extends State<ActiveCity> {
     return new AssetImage(assetName);
   }
 
-  Widget buildContent(CityData activeCity) {
-
+  Widget _buildContent(CityData activeCity) {
     if (activeCity == null) {
-      // return info and button for cityList
+      // TODO: return info and button for cityList
     } else {
       return new Column(
         children: <Widget>[
-          new Padding(
-            padding: new EdgeInsets.only(bottom: 80.0),
-            child: new Row(
-              children: <Widget>[
-                new Expanded(
-                  child: new Align(
-                    child: new InkWell(
-                      child: new Icon(Icons.info, size: 25.0, color: Colors.white),
-                      onTap: null,
-                    ),
-                    alignment: Alignment.centerLeft,
-                  ),
-                ),
-                new Expanded(
-                  child: new Align(
-                    child: new InkWell(
-                      child: new Icon(Icons.list, size: 30.0, color: Colors.white),
-                      onTap: () => _goToCityOverview(),
-                    ),
-                    alignment: Alignment.centerRight,
-                  )
-                ),
-              ],
-            ),
-          ), // Info Button and List Button
-          new Center(
-            child: new Text(
-              activeCity.weather.tempC.toString() + '°',
-              style: new TextStyle(
-                color: Colors.white,
-                fontSize: 75.0
-              ),
-            ),
-          ),
-          new Center(
-              child: new Text(
-                'Feels like ' + activeCity.weather.feelsLikeC.toString() + '°',
-                style: new TextStyle(
-                  color: Colors.white,
-                  fontSize: 20.0,
-                ),
-              )
-          ),
-          new Expanded(
-            child: new Align(
-              alignment: Alignment.bottomCenter,
-              child: buildContentBottom(activeCity),
-            ),
-          ),
+          _buildTopContent(), // Info Button and List Button
+          _buildMiddleContent(activeCity),
+          _buildBottomContent(activeCity),
         ],
       );
     }
   }
 
-  Widget buildContentBottom(CityData activeCity) {
+  Widget _buildMiddleContent(CityData activeCity) {
+    return new Column(
+      children: <Widget>[
+        new Center(
+          child: new Text(
+                geTimeFromDateTime(activeCity.localtime + '   '),
+                style: new TextStyle(
+                    color: Colors.white,
+                    fontSize: 20.0
+                )
+            ),
+        ),
+        new Center(
+          child: new Padding(
+            padding: EdgeInsets.only(bottom: 30.0),
+            child: new Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                new Text(
+                    '   ' + activeCity.name + '   ',
+                    style: new TextStyle(
+                      color: Colors.white,
+                      fontSize: 30.0,
+                    )
+                ),
+                new InkWell(
+                  onTap: () => _refreshCity(activeCity),
+                  child: new Icon(
+                    Icons.refresh,
+                    color: Colors.white30,
+                    size: 30.0
+                  )
+                ),
+              ],
+            ),
+          ),
+        ),
+        new Center(
+          child: new Text(
+            activeCity.weather.tempC.round().toString() + '°',
+            style: new TextStyle(
+              color: Colors.white,
+              fontSize: 75.0,
+              fontWeight: FontWeight.bold
+            ),
+          ),
+        ),
+        new Center(
+          child: new Text(
+            'Feels like ' + activeCity.weather.feelsLikeC.round().toString() + '°',
+            style: new TextStyle(
+              color: Colors.white,
+              fontSize: 17.5,
+            ),
+          )
+        ),
+      ],
+    );
+  }
 
-    return new Text('Hello World');
+  _refreshCity(CityData activeCity) {
+    String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  activeCity.name;
+
+    http.get(requestURL)
+      .then((response) => response.body)
+      .then(json.decode)
+      .then((apiData) {
+        if(!apiCallHasError(apiData)) {
+          _updateCity(apiData, activeCity);
+        }
+      }); // no error catch
+  }
+
+  _updateCity(apiData, cityToRefresh) {
+    var current  = apiData['current'];
+    var location = apiData['location'];
+
+    Weather  weather  = mapWeather(current);
+    CityData newCityData = mapCityData(location, weather);
+
+    int index = globals.savedCitys.indexOf(cityToRefresh);
+
+    globals.savedCitys[index] = newCityData;
+    globals.activeCity = newCityData;
+
+    setState(() {
+      _activeCity = newCityData;
+    });
+  }
+
+  Widget _buildTopContent() {
+    return new Padding(
+      padding: new EdgeInsets.only(left: 25.0, right: 25.0, bottom: 10.0),
+      child: new Row(
+        children: <Widget>[
+          new Expanded(
+            child: new Align(
+              child: new InkWell(
+                child: new Icon(Icons.info, size: 25.0, color: Colors.white),
+                onTap: null,
+              ),
+              alignment: Alignment.centerLeft,
+            ),
+          ),
+          new Expanded(
+              child: new Align(
+                child: new InkWell(
+                  child: new Icon(Icons.list, size: 30.0, color: Colors.white),
+                  onTap: () => _goToCityOverview(),
+                ),
+                alignment: Alignment.centerRight,
+              )
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomContent(CityData activeCity) {
+    return new Expanded(
+      child: new Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          new Container(
+            decoration: new BoxDecoration(
+              color: Colors.black45,
+            ),
+            child: new Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+              new Text(
+                  activeCity.weather.condition,
+                  style: new TextStyle(
+                    color: Colors.white,
+                    fontSize: 20.0
+                  )
+                ),
+                new Image.network(
+                  activeCity.weather.conditionIcon,
+                  width: 50.0,
+                  height: 50.0
+                ),
+              ],
+            ),
+          ),
+          new Divider(color: Colors.white, height: 1.0),
+          new Container(
+            decoration: new BoxDecoration(
+              color: Colors.black45,
+            ),
+            constraints: new BoxConstraints.expand(
+              // full hd
+              height: 120.0,
+            ),
+            child: new Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                new Padding(
+                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 10.0, bottom: 10.0),
+                  child: new Row(
+                    children: <Widget>[
+                      new Expanded(
+                        child: new Align(
+                          child: new Text(
+                            'Wind "' + activeCity.weather.windDirection + '"',
+                            style: _getBottomTextStyle()
+                          ),
+                          alignment: Alignment.centerLeft,
+                        )
+                      ),
+                      new Expanded(
+                        child: new Align(
+                          child: new Text(
+                            activeCity.weather.windKph.toString() + ' kph',
+                            style: _getBottomTextStyle()
+                          ),
+                          alignment: Alignment.centerRight,
+                        )
+                      )
+                    ],
+                  ),
+                ),
+                new Divider(color: Colors.white),
+                new Padding(
+                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 10.0, bottom: 10.0),
+                  child: new Row(
+                    children: <Widget>[
+                      new Expanded(
+                        child: new Align(
+                          alignment: Alignment.centerLeft,
+                          child: new Text(
+                            'Humidity',
+                            style: _getBottomTextStyle()
+                          )
+                        )
+                      ),
+                      new Expanded(
+                        child: new Align(
+                          alignment: Alignment.centerRight,
+                          child: new Text(
+                            activeCity.weather.humidity.toString() + ' %',
+                            style: _getBottomTextStyle()
+                          )
+                        )
+                      )
+                    ],
+                  ),
+                ),
+              ],
+            )
+          ),
+        ],
+      ),
+    );
+  }
+
+  TextStyle _getBottomTextStyle() {
+    return new TextStyle(
+      color: Colors.white,
+      fontSize: 20.0
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-        body: new Container(
-            padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 35.0),
-            constraints: new BoxConstraints.expand(
-              // full hd
-              height: 1920.0,
-              width: 1080.0,
-            ),
-            decoration: new BoxDecoration(
-                image: new DecorationImage(
-                    image: getBackground(),
-                    fit: BoxFit.fill
-                )
-            ),
-          child: buildContent(globals.activeCity)
-        )
+      body: new Container(
+        padding: const EdgeInsets.only(top: 35.0),
+        constraints: new BoxConstraints.expand(
+          // full hd
+          height: 1920.0,
+          width: 1080.0,
+        ),
+        decoration: new BoxDecoration(
+          image: new DecorationImage(
+            image: _getBackground(),
+            fit: BoxFit.fill
+          )
+        ),
+        child: _buildContent(globals.activeCity)
+      ),
     );
   }
 }

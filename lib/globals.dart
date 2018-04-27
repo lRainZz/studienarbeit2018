@@ -9,4 +9,6 @@ List<CityData> savedCitys;
 
 bool needsUpdate = false;
 
+bool useImperial = false;
+
 int currentId = 1;

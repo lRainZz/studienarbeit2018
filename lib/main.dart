@@ -12,11 +12,11 @@ import 'helper.dart';
 // ----- high priority -----
 // TODO: no active city screen
 // TODO: city overview color scheme
+// TODO: setting for imperial / metric units
 // TODO: credits for apixu
 // ----- ----- ----- -----
 //
 // ----- low priority -----
-// TODO: setting for imperial / metric units
 // TODO: app logo cross with r-a-i-n lettering
 // TODO: split classes into different files
 // ----- ----- ----- -----
@@ -581,38 +581,47 @@ class ActiveCityState extends State<ActiveCity> {
             decoration: new BoxDecoration(
               color: Colors.black45,
             ),
-            child: new Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-              new Text(
-                  activeCity.weather.condition,
-                  style: new TextStyle(
-                    color: Colors.white,
-                    fontSize: 20.0
-                  )
-                ),
-                new Image.network(
-                  activeCity.weather.conditionIcon,
-                  width: 50.0,
-                  height: 50.0
-                ),
-              ],
-            ),
-          ),
-          new Divider(color: Colors.white, height: 1.0),
-          new Container(
-            decoration: new BoxDecoration(
-              color: Colors.black45,
-            ),
-            constraints: new BoxConstraints.expand(
-              // full hd
-              height: 120.0,
-            ),
             child: new Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 new Padding(
-                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 10.0, bottom: 10.0),
+                  padding: new EdgeInsets.only(left: 25.0, right: 10.0, top: 5.0, bottom: 5.0),
+                  child: new Row(
+                    children: <Widget>[
+                      new Expanded(
+                        child: new Align(
+                          alignment: Alignment.centerLeft,
+                          child: new Text(
+                            'Condition',
+                            style: _getBottomTextStyle()
+                          )
+                        ),
+                      ),
+                      new Expanded(
+                        child:new Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: <Widget>[
+                            new Text(
+                              activeCity.weather.condition,
+                              style: new TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20.0
+                              )
+                            ),
+                            new Image.network(
+                              activeCity.weather.conditionIcon,
+                              width:  50.0,
+                              height: 50.0
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                new Divider(color: Colors.white, height: 1.0),
+                new Padding(
+                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 15.0, bottom: 15.0),
                   child: new Row(
                     children: <Widget>[
                       new Expanded(
@@ -636,9 +645,9 @@ class ActiveCityState extends State<ActiveCity> {
                     ],
                   ),
                 ),
-                new Divider(color: Colors.white),
+                new Divider(color: Colors.white, height: 1.0),
                 new Padding(
-                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 10.0, bottom: 10.0),
+                  padding: new EdgeInsets.only(left: 25.0, right: 25.0, top: 15.0, bottom: 15.0),
                   child: new Row(
                     children: <Widget>[
                       new Expanded(

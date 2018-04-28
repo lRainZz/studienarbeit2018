@@ -10,7 +10,6 @@ import 'helper.dart';
 // ===== ===== ===== =====
 // TODO LIST
 // ----- high priority -----
-// TODO: no active city screen
 // TODO: city overview color scheme
 // TODO: setting for imperial / metric units
 // TODO: credits for apixu
@@ -37,26 +36,12 @@ class MainApp extends StatefulWidget {
 }
 
 class MainAppState extends State<MainApp> {
-  var hasActiveCity;
-
-  // constructor
-  MainAppState() {
-    // reading state from last app start
-    hasActiveCity = (globals.activeCity != null);
-  }
-
-  // check if active city is set
-  CityData _getActiveCity() {
-    CityData value;
-    (hasActiveCity) ?  value = globals.activeCity : value = null;
-    return value;
-  }
 
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
       // directly goto cityOverview if no activeCity is set
-      home: (_getActiveCity() != null) ? new ActiveCity() : new CityOverview(),
+      home: new ActiveCity(),
       // navigation routes for the screens
         routes: <String, WidgetBuilder> {
         '/activeCity':   (BuildContext context) => new ActiveCity(),
@@ -390,21 +375,23 @@ class ActiveCityState extends State<ActiveCity> {
     // load active city
     _activeCity = globals.activeCity;
 
-    // refresh data
-    if (globals.needsUpdate) {
+    if (_activeCity != null) {
+      // refresh data
+      if (globals.needsUpdate) {
+        String requestURL = 'https://api.apixu.com/v1/current.json?key=' +
+            API_KEY + '=' + _activeCity.name;
 
-      String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  _activeCity.name;
+        http.get(requestURL)
+            .then((response) => response.body)
+            .then(json.decode)
+            .then((apiData) {
+          if (!apiCallHasError(apiData)) {
+            _updateCity(apiData, _activeCity);
+          }
+        });
 
-      http.get(requestURL)
-          .then((response) => response.body)
-          .then(json.decode)
-          .then((apiData) {
-        if(!apiCallHasError(apiData)) {
-          _updateCity(apiData, _activeCity);
-        }
-      });
-
-      globals.needsUpdate = false;
+        globals.needsUpdate = false;
+      }
     }
   }
 
@@ -441,17 +428,41 @@ class ActiveCityState extends State<ActiveCity> {
   }
 
   Widget _buildContent(CityData activeCity) {
-    if (activeCity == null) {
-      // TODO: return info and button for cityList
+    return new Column(
+      children: _chooseContent(activeCity),
+    );
+  }
+
+  List<Widget> _chooseContent(CityData activeCity) {
+    List<Widget> widgets = new List<Widget>();
+
+    widgets.add(_buildTopContent());
+
+    if (activeCity != null) {
+      widgets.add(_buildMiddleContent(activeCity));
+      widgets.add(_buildBottomContent(activeCity));
     } else {
-      return new Column(
-        children: <Widget>[
-          _buildTopContent(), // Info Button and List Button
-          _buildMiddleContent(activeCity),
-          _buildBottomContent(activeCity),
-        ],
-      );
+      widgets.add(_buildInActiveContent());
     }
+
+    return widgets;
+  }
+
+  Widget _buildInActiveContent() {
+    return new Padding(
+      padding: new EdgeInsets.only(top: 100.0),
+      child: new Center(
+        child:
+        new Text(
+          'NO ACTIVE CITY',
+          style: new TextStyle(
+            color: Colors.white,
+            fontSize: 25.0
+          )
+        ),
+      )
+    );
+
   }
 
   Widget _buildMiddleContent(CityData activeCity) {
@@ -702,7 +713,7 @@ class ActiveCityState extends State<ActiveCity> {
             fit: BoxFit.fill
           )
         ),
-        child: _buildContent(globals.activeCity)
+        child: _buildContent(_activeCity)
       ),
     );
   }

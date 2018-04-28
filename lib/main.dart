@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,14 +11,15 @@ import 'helper.dart';
 // ===== ===== ===== =====
 // TODO LIST
 // ----- high priority -----
-// TODO: city overview color scheme
-// TODO: setting for imperial / metric units
-// TODO: credits for apixu
 // ----- ----- ----- -----
 //
 // ----- low priority -----
 // TODO: app logo cross with r-a-i-n lettering
 // TODO: split classes into different files
+// ----- ----- ----- -----
+//
+// ----- finally -----
+// TODO: build apk
 // ----- ----- ----- -----
 // TODO LIST END
 // ===== ===== ===== =====
@@ -46,7 +48,118 @@ class MainAppState extends State<MainApp> {
         routes: <String, WidgetBuilder> {
         '/activeCity':   (BuildContext context) => new ActiveCity(),
         '/cityOverview': (BuildContext context) => new CityOverview(),
+        '/settingsView': (BuildContext context) => new SettingsView(),
       }
+    );
+  }
+}
+
+class SettingsView extends StatefulWidget {
+  @override
+  createState() => SettingsViewState();
+}
+
+class SettingsViewState extends State<SettingsView> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
+  bool _useImperialUnits;
+
+  Widget _buildContent() {
+    return new Column(
+      children: <Widget>[
+        new Padding(
+          padding: new EdgeInsets.only(top: 10.0, bottom: 10.0),
+          child:new SwitchListTile(
+          value: _useImperialUnits,
+          onChanged: (value) => _setUseImperial(value),
+          title: new Text(
+            'Use imperial units',
+            style: new TextStyle(
+              color: Colors.black45,
+              fontSize: 20.0
+              )
+            )
+          ),
+        ),
+        new Expanded(
+          child: new Padding(
+            padding: new EdgeInsets.all(20.0),
+            child: new Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                new Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    new Text(
+                        'Weather data provided by',
+                        style: new TextStyle(
+                            color: Colors.black54
+                        )
+                    ),
+                    new InkWell(
+                      child: new Text(
+                          ' apixu.com',
+                          style: new TextStyle(
+                              color: Colors.blueAccent
+                          )
+                      ),
+                      onTap: () => launch('https://www.apixu.com/'),
+                    )
+                  ],
+                ),
+              ],
+            )
+          ),
+        ),
+      ],
+    );
+  }
+
+  _setUseImperial(bool value) {
+    globals.useImperial = value;
+
+    setState(() {
+      _useImperialUnits = value;
+    });
+
+    _scaffoldKey.currentState.showSnackBar(
+      new SnackBar(
+        content: new Text('Preferences updated'),
+      )
+    );
+  }
+
+  _goBack() {
+    // update possible changed options
+    globals.navRefresh = true;
+    Navigator.of(context).pop();
+  }
+
+  SettingsViewState() {
+    _useImperialUnits = globals.useImperial;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      key: _scaffoldKey,
+      appBar: new AppBar(
+        backgroundColor: Colors.white,
+        leading: new IconButton(
+          icon: new Icon(
+            Icons.arrow_back,
+            color: Colors.black54
+          ),
+          onPressed: () => _goBack(),
+        ),
+        title: new Text(
+          'Settings',
+          style: new TextStyle(
+            color: Colors.black54
+          ),
+        ),
+      ),
+      body: _buildContent()
     );
   }
 }
@@ -58,13 +171,15 @@ class CityOverview extends StatefulWidget {
 }
 
 class CityOverviewState extends State<CityOverview> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
   CityData       _activeCity;
   List<CityData> _cityList;
   bool           _showSearch;
   bool           _isLoading;
   bool           _noResults;
   List<CityData> _apiResults;
-  String         _noResultPlaceholder = '';
+  String         _noResultPlaceholder;
 
   final _subject = new PublishSubject<String>();
 
@@ -116,7 +231,6 @@ class CityOverviewState extends State<CityOverview> {
             errorCode = apiData['error']['code'];
           } else errorCode = 0;
 
-          // TODO: different actions for different HTTP status codes
           // handling all possible errors in the same way
           if ( /*HTTP 400*/ errorCode == 1003 || errorCode == 1005 || errorCode == 1006 || errorCode == 9999 ||
                /*HTTP 401*/ errorCode == 1002 || errorCode == 2006 ||
@@ -170,19 +284,35 @@ class CityOverviewState extends State<CityOverview> {
   }
 
   _buildContent(BuildContext context, bool showSearch) {
-    if (!showSearch) {
+    if (!_showSearch) {
       return new Scaffold(
+        key: _scaffoldKey,
         appBar: new AppBar(
           // hand over function only like this: '() => funcName()'
           // with only 'funcName()' the function is called immediately after the builder is finished!
           // with only 'funcName' the function is not called at all!
-          leading: new IconButton(icon: new Icon(Icons.arrow_back), onPressed: () => _goToActiveCity()),
-          title: new Text('Saved City Overview'),
+          leading: new IconButton(
+            icon: new Icon(
+              Icons.arrow_back,
+              color: Colors.black54
+            ),
+            onPressed: () => _goToActiveCity()
+          ),
+          title: new Text(
+            'Saved Citys',
+            style: new TextStyle(
+              color: Colors.black54
+            )
+          ),
+          backgroundColor: Colors.white
         ),
         body: _buildSavedCitys(),
         floatingActionButton: new FloatingActionButton(
             elevation: 0.0,
-            child: new Icon(Icons.add),
+            child: new Icon(
+              Icons.add,
+              color: Colors.white
+            ),
             onPressed: () => setState(() {
               _showSearch = true;
             }), //() => _showBottomSheet(context)
@@ -190,21 +320,26 @@ class CityOverviewState extends State<CityOverview> {
       );
     } else {
       return new Scaffold(
+          key: _scaffoldKey,
           appBar: new AppBar(
+            backgroundColor: Colors.white,
             leading: new IconButton(
-                icon: new Icon(Icons.clear), onPressed: () =>
+                icon: new Icon(
+                  Icons.clear,
+                  color: Colors.black54
+                ),
+                onPressed: () =>
                 setState(() {
                   _showSearch = false;
                   _clearList();
                 })),
             title: new TextField(
               style: new TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 18.0,
               ),
               decoration: new InputDecoration.collapsed(
                 hintStyle: new TextStyle(
-                  color: Colors.white30,
                 ),
                 hintText: 'Search City ...',
               ),
@@ -251,7 +386,7 @@ class CityOverviewState extends State<CityOverview> {
           key: new ObjectKey(cityData.id),
           leading: new Icon(Icons.search),
           title: new Text (cityData.name),
-          onTap: () => _addCityToList(context, cityData)
+          onTap: () => _addCityToList(cityData)
       );
     }).toList();
   }
@@ -268,10 +403,10 @@ class CityOverviewState extends State<CityOverview> {
     return result;
   }
 
-  _addCityToList(BuildContext context, CityData cityData) {
+  _addCityToList(CityData cityData) {
     // check for doubles
     // change list to object of city (name, plz, etc) for uniques
-    String snackMessage = '';
+    String snackMessage;
 
     // check doubles and set message
     if (_isDouble(cityData.name)) {
@@ -280,6 +415,9 @@ class CityOverviewState extends State<CityOverview> {
 
     } else if (cityData != null) {
       // check for null (should not happen .. should)
+
+      _clearList();
+
       setState(() {
         _cityList.add(cityData);
         _showSearch = false;
@@ -293,24 +431,33 @@ class CityOverviewState extends State<CityOverview> {
       // on error set message
       snackMessage = "Could't add city to list. Pleas try again";
     }
-      // view snackbar with given message
-      // Scaffold.of(context).showSnackBar(
-      //     new SnackBar(
-      //         content: new Text(snackMessage)
-      //     )
-      // );
+
+    // view snackbar with given message
+    _scaffoldKey.currentState.showSnackBar(
+      new SnackBar(
+        content: new Text(
+          snackMessage
+        ),
+      )
+    );
   }
 
   _goToActiveCity () {
     // clear results for next time
     _clearList();
 
-    // update data on screen change
+    // update city data on screen change
     globals.needsUpdate = true;
+
+    // update common data on screen change
+    globals.navRefresh  = true;
 
     // pushNamed would generate a route which can be navigated back
     // with pushReplacementNamed you basically switch between screens
-    Navigator.of(context).pushReplacementNamed('/activeCity');
+    // Navigator.of(context).pushReplacementNamed('/activeCity');
+
+    // pop context for seamless transition
+    Navigator.of(context).pop();
   }
 
   _deleteFromList(CityData cityData) {
@@ -337,7 +484,6 @@ class CityOverviewState extends State<CityOverview> {
             key: new ObjectKey(cityData.id),
             leading: new Icon(
               (_activeCity == cityData) ? Icons.check_box : Icons.check_box_outline_blank,
-              color: (_activeCity == cityData) ? Colors.green : null,
             ),
             title: new Text(cityData.name),
             trailing: new IconButton(
@@ -369,11 +515,21 @@ class ActiveCity extends StatefulWidget {
 }
 
 class ActiveCityState extends State<ActiveCity> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
   CityData _activeCity;
+  bool     _useImperial;
+
+
   // constructor
   ActiveCityState() {
-    // load active city
+    _refreshData();
+  }
+
+  _refreshData() {
+    // load globals
     _activeCity = globals.activeCity;
+    _useImperial = globals.useImperial;
 
     if (_activeCity != null) {
       // refresh data
@@ -396,9 +552,12 @@ class ActiveCityState extends State<ActiveCity> {
   }
 
   _goToCityOverview() {
-    // pushNamed would generate a route which can be navigated back
-    // with pushReplacementNamed you basically switch between screens
-    Navigator.of(context).pushReplacementNamed('/cityOverview');
+    // pushName to allow using hardware / software back button to go to activeCity
+    Navigator.of(context).pushNamed('/cityOverview');
+  }
+
+  _goToSettingsView() {
+    Navigator.of(context).pushNamed('/settingsView');
   }
 
   AssetImage _getBackground() {
@@ -428,6 +587,11 @@ class ActiveCityState extends State<ActiveCity> {
   }
 
   Widget _buildContent(CityData activeCity) {
+    if (globals.navRefresh) {
+      globals.navRefresh = false;
+      _refreshData();
+    }
+
     return new Column(
       children: _chooseContent(activeCity),
     );
@@ -465,67 +629,25 @@ class ActiveCityState extends State<ActiveCity> {
 
   }
 
-  Widget _buildMiddleContent(CityData activeCity) {
-    return new Column(
-      children: <Widget>[
-        new Center(
-          child: new Text(
-                geTimeFromDateTime(activeCity.localtime + '   '),
-                style: new TextStyle(
-                    color: Colors.white,
-                    fontSize: 20.0
-                )
-            ),
-        ),
-        new Center(
-          child: new Padding(
-            padding: EdgeInsets.only(bottom: 30.0),
-            child: new Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                new Text(
-                    '   ' + activeCity.name + '   ',
-                    style: new TextStyle(
-                      color: Colors.white,
-                      fontSize: 30.0,
-                    )
-                ),
-                new InkWell(
-                  onTap: () => _refreshCity(activeCity),
-                  child: new Icon(
-                    Icons.refresh,
-                    color: Colors.white30,
-                    size: 30.0
-                  )
-                ),
-              ],
-            ),
-          ),
-        ),
-        new Center(
-          child: new Text(
-            activeCity.weather.tempC.round().toString() + '°',
-            style: new TextStyle(
-              color: Colors.white,
-              fontSize: 75.0,
-              fontWeight: FontWeight.bold
-            ),
-          ),
-        ),
-        new Center(
-          child: new Text(
-            'Feels like ' + activeCity.weather.feelsLikeC.round().toString() + '°',
-            style: new TextStyle(
-              color: Colors.white,
-              fontSize: 17.5,
-            ),
-          )
-        ),
-      ],
-    );
-  }
-
   _refreshCity(CityData activeCity) {
+    // response to loading
+    _scaffoldKey.currentState.showSnackBar(
+      new SnackBar(
+        content:
+        new Row(
+          children: <Widget>[
+            new CircularProgressIndicator(),
+            new Padding(
+              padding: new EdgeInsets.only(left: 25.0),
+              child: new Text(
+                'Loading...'
+              )
+            ),
+          ],
+        ),
+      )
+    );
+
     String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  activeCity.name;
 
     http.get(requestURL)
@@ -536,6 +658,8 @@ class ActiveCityState extends State<ActiveCity> {
           _updateCity(apiData, activeCity);
         }
       }); // no error catch
+
+    // _scaffoldKey.currentState.removeCurrentSnackBar();
   }
 
   _updateCity(apiData, cityToRefresh) {
@@ -555,6 +679,15 @@ class ActiveCityState extends State<ActiveCity> {
     });
   }
 
+  double _getConditionTextSize(String condition) {
+    int textSize = condition.length;
+    double result;
+
+    textSize >= 40 ? result = 11.0 : (textSize >= 32 ? result = 14.0 : (textSize > 26 ? result = 16.0 : result = 20.0));
+
+    return result;
+  }
+
   Widget _buildTopContent() {
     return new Padding(
       padding: new EdgeInsets.only(left: 25.0, right: 25.0, bottom: 10.0),
@@ -564,7 +697,7 @@ class ActiveCityState extends State<ActiveCity> {
             child: new Align(
               child: new InkWell(
                 child: new Icon(Icons.info, size: 25.0, color: Colors.white),
-                onTap: null,
+                onTap: () => _goToSettingsView(),
               ),
               alignment: Alignment.centerLeft,
             ),
@@ -580,6 +713,68 @@ class ActiveCityState extends State<ActiveCity> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMiddleContent(CityData activeCity) {
+    return new Column(
+      children: <Widget>[
+        new Center(
+          child: new Text(
+              geTimeFromDateTime(activeCity.localtime + '   '),
+              style: new TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0
+              )
+          ),
+        ),
+        new Center(
+          child: new Padding(
+            padding: EdgeInsets.only(bottom: 30.0),
+            child: new Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                new InkWell(
+                  onTap: () => _refreshCity(activeCity),
+                  child: new Text(
+                    '   ' + activeCity.name + '   ',
+                    style: new TextStyle(
+                      color: Colors.white,
+                      fontSize: 30.0,
+                    )
+                  ),
+                ),
+                new InkWell(
+                    onTap: () => _refreshCity(activeCity),
+                    child: new Icon(
+                        Icons.refresh,
+                        color: Colors.white30,
+                        size: 30.0
+                    )
+                ),
+              ],
+            ),
+          ),
+        ),
+        new Center(
+          child: new Text(
+            (_useImperial ? activeCity.weather.tempF.round().toString() : activeCity.weather.tempC.round().toString()) + '°',
+            style: new TextStyle(
+                color: Colors.white,
+                fontSize: 80.0,
+            ),
+          ),
+        ),
+        new Center(
+            child: new Text(
+              'Feels like ' + ( _useImperial ? activeCity.weather.feelsLikeF.round().toString() : activeCity.weather.feelsLikeC.round().toString()) + '°',
+              style: new TextStyle(
+                color: Colors.white,
+                fontSize: 17.5,
+              ),
+            )
+        ),
+      ],
     );
   }
 
@@ -609,6 +804,7 @@ class ActiveCityState extends State<ActiveCity> {
                         ),
                       ),
                       new Expanded(
+                        flex: 2,
                         child:new Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: <Widget>[
@@ -616,7 +812,7 @@ class ActiveCityState extends State<ActiveCity> {
                               activeCity.weather.condition,
                               style: new TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20.0
+                                  fontSize: _getConditionTextSize(activeCity.weather.condition)
                               )
                             ),
                             new Image.network(
@@ -647,7 +843,7 @@ class ActiveCityState extends State<ActiveCity> {
                       new Expanded(
                         child: new Align(
                           child: new Text(
-                            activeCity.weather.windKph.toString() + ' kph',
+                              _useImperial ? activeCity.weather.windMph.toString() + ' mph' : activeCity.weather.windKph.toString() + ' kph',
                             style: _getBottomTextStyle()
                           ),
                           alignment: Alignment.centerRight,
@@ -700,6 +896,7 @@ class ActiveCityState extends State<ActiveCity> {
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
+      key: _scaffoldKey,
       body: new Container(
         padding: const EdgeInsets.only(top: 35.0),
         constraints: new BoxConstraints.expand(

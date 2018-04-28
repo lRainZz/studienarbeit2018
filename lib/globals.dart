@@ -9,6 +9,8 @@ List<CityData> savedCitys;
 
 bool needsUpdate = false;
 
+bool navRefresh = false;
+
 bool useImperial = false;
 
 int currentId = 1;

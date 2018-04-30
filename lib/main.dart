@@ -5,21 +5,6 @@ import 'settings.dart';
 import 'cityOverview.dart';
 import 'activeCity.dart';
 
-// ===== ===== ===== =====
-// TODO LIST
-// ----- high priority -----
-// ----- ----- ----- -----
-//
-// ----- low priority -----
-// TODO: app logo cross with r-a-i-n lettering
-// ----- ----- ----- -----
-//
-// ----- finally -----
-// TODO: build apk
-// ----- ----- ----- -----
-// TODO LIST END
-// ===== ===== ===== =====
-
 void main() => runApp(
   new MainApp()
 );

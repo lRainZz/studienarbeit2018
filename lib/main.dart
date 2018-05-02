@@ -5,6 +5,10 @@ import 'settings.dart';
 import 'cityOverview.dart';
 import 'activeCity.dart';
 
+// ===== ===== =====
+// TODO: SQLite database
+// ===== ===== =====
+
 void main() => runApp(
   new MainApp()
 );

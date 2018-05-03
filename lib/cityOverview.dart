@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'globals.dart' as globals;
 import 'helper.dart';
+import 'dbConnection.dart';
 
 class CityOverview extends StatefulWidget {
   @override
@@ -22,17 +23,26 @@ class CityOverviewState extends State<CityOverview> {
   bool           _noResults;
   List<CityData> _apiResults;
   String         _noResultPlaceholder;
+  DBConnection   _dbConnection;
 
   final _subject = new PublishSubject<String>();
 
   // constructor
   CityOverviewState () {
-    // read active city
+    _dbConnection  = globals.con;
     _showSearch    = false;
     _isLoading     = false;
     _noResults     = false;
-    _activeCity    = globals.activeCity;
-    _cityList      = globals.savedCitys;
+    _dbConnection.getAllCitys().then(
+      (cityList) {
+        setState(() {
+          _cityList = cityList;
+        });
+
+      }
+    );
+
+    _activeCity    = getActiveCity(_cityList);
     _apiResults    = new List();
 
     if (_cityList == null) {
@@ -47,7 +57,7 @@ class CityOverviewState extends State<CityOverview> {
       setState(() {
         _isLoading = false;
       });
-      _clearList();
+      _clearSearchList();
       return;
     }
 
@@ -55,7 +65,7 @@ class CityOverviewState extends State<CityOverview> {
       _isLoading = true;
     });
 
-    _clearList();
+    _clearSearchList();
 
     String requestURL = 'https://api.apixu.com/v1/current.json?key=' + API_KEY + '=' +  cityName;
 
@@ -100,7 +110,7 @@ class CityOverviewState extends State<CityOverview> {
     });
   }
 
-  _clearList() {
+  _clearSearchList() {
     setState(() {
       _noResults = false;
       _noResultPlaceholder = '';
@@ -113,7 +123,7 @@ class CityOverviewState extends State<CityOverview> {
     var location = apiCity['location'];
 
     Weather  weather  = mapWeather(current);
-    CityData cityData = mapCityData(location, weather);
+    CityData cityData = mapCityData(location, weather, false);
 
     setState(() {
       _apiResults.add(cityData);
@@ -173,7 +183,7 @@ class CityOverviewState extends State<CityOverview> {
                 onPressed: () =>
                     setState(() {
                       _showSearch = false;
-                      _clearList();
+                      _clearSearchList();
                     })),
             title: new TextField(
               style: new TextStyle(
@@ -258,14 +268,19 @@ class CityOverviewState extends State<CityOverview> {
     } else if (cityData != null) {
       // check for null (should not happen .. should)
 
-      _clearList();
+      _clearSearchList();
 
-      setState(() {
-        _cityList.add(cityData);
-        _showSearch = false;
-      });
+      _dbConnection.setCityData(cityData).then(
+          (idTuple) {
+            cityData.setId(idTuple[0]);
+            cityData.weather.setId(idTuple[1]);
 
-      globals.savedCitys = _cityList;
+            setState(() {
+              _cityList.add(cityData);
+              _showSearch = false;
+            });
+          }
+      );
 
       snackMessage = "'" + cityData.name + "' was added to your city list.";
 
@@ -286,7 +301,7 @@ class CityOverviewState extends State<CityOverview> {
 
   _goToActiveCity () {
     // clear results for next time
-    _clearList();
+    _clearSearchList();
 
     // update city data on screen change
     globals.needsUpdate = true;
@@ -306,16 +321,16 @@ class CityOverviewState extends State<CityOverview> {
 
     if (_activeCity == cityData) {
       _activeCity = null;
+      cityData.setActive(false);
+      _dbConnection.updateCity(cityData);
     }
 
     if (_cityList.contains(cityData)) {
+      _dbConnection.deleteCity(cityData);
       setState(() {
         _cityList.remove(cityData);
       });
     }
-
-    globals.savedCitys = _cityList;
-    globals.activeCity = _activeCity;
   }
 
   Widget _buildSavedCitys() {
@@ -336,13 +351,13 @@ class CityOverviewState extends State<CityOverview> {
             onTap: () {
               setState(() {
                 if (!(_activeCity == cityData)) {
-                  // write raw string into activeCity
                   _activeCity = cityData;
+                  cityData.setActive(true);
                 } else {
                   _activeCity = null;
                 }
-                // set active city for globals, no matter the outcome
-                globals.activeCity = _activeCity;
+                // update active state in db
+                _dbConnection.updateCity(cityData);
               });
             }
         );

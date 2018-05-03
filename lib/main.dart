@@ -4,24 +4,24 @@ import 'globals.dart' as globals;
 import 'settings.dart';
 import 'cityOverview.dart';
 import 'activeCity.dart';
+import 'dbConnection.dart';
 
 // ===== ===== =====
 // TODO: SQLite database
 // ===== ===== =====
 
-void main() => runApp(
-  new MainApp()
-);
+void main() => runApp(new MainApp());
 
 class MainApp extends StatefulWidget {
-  // get last city set after exiting the app
-  final lastCityIsSet = globals.activeCity; // boolean
-
   @override
   createState() => MainAppState();
 }
 
 class MainAppState extends State<MainApp> {
+
+  MainAppState() {
+    globals.con = new DBConnection();
+  }
 
   @override
   Widget build(BuildContext context) {

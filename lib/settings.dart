@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'globals.dart' as globals;
+import 'dbConnection.dart';
 
 class SettingsView extends StatefulWidget {
   @override
@@ -10,14 +11,24 @@ class SettingsView extends StatefulWidget {
 class SettingsViewState extends State<SettingsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
-  bool _useImperialUnits;
+  bool _useImperialUnits = false;
+  DBConnection _dbConnection;
+
+  SettingsViewState() {
+    _dbConnection = globals.con;
+    _dbConnection.getSettings().then(
+      (bool) {setState(() {
+        _useImperialUnits = bool;
+      });}
+    );
+  }
 
   Widget _buildContent() {
     return new Column(
       children: <Widget>[
         new Padding(
           padding: new EdgeInsets.only(top: 10.0, bottom: 10.0),
-          child:new SwitchListTile(
+          child: new SwitchListTile(
               value: _useImperialUnits,
               onChanged: (value) => _setUseImperial(value),
               title: new Text(
@@ -64,8 +75,6 @@ class SettingsViewState extends State<SettingsView> {
   }
 
   _setUseImperial(bool value) {
-    globals.useImperial = value;
-
     setState(() {
       _useImperialUnits = value;
     });
@@ -79,12 +88,9 @@ class SettingsViewState extends State<SettingsView> {
 
   _goBack() {
     // update possible changed options
+    _dbConnection.setSettings(_useImperialUnits);
     globals.navRefresh = true;
     Navigator.of(context).pop();
-  }
-
-  SettingsViewState() {
-    _useImperialUnits = globals.useImperial;
   }
 
   @override

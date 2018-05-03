@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'globals.dart' as globals;
 import 'helper.dart';
+import 'dbConnection.dart';
 
 
 class ActiveCity extends StatefulWidget {
@@ -16,19 +17,34 @@ class ActiveCity extends StatefulWidget {
 class ActiveCityState extends State<ActiveCity> {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
-  CityData _activeCity;
-  bool     _useImperial;
+  CityData     _activeCity;
+  bool         _useImperial;
+  DBConnection _dbConnection;
 
 
   // constructor
   ActiveCityState() {
-    _refreshData();
+    _dbConnection = globals.con;
+
+    if (_dbConnection.established()) _refreshData();
   }
 
   _refreshData() {
-    // load globals
-    _activeCity = globals.activeCity;
-    _useImperial = globals.useImperial;
+    _dbConnection.getAllCitys().then(
+      (cityList) {
+        setState(() {
+          _activeCity = getActiveCity(cityList);
+        });
+      }
+    );
+
+    _dbConnection.getSettings().then(
+        (bool) {
+          setState(() {
+            _useImperial = bool;
+          });
+        }
+    );
 
     if (_activeCity != null) {
       // refresh data
@@ -62,14 +78,13 @@ class ActiveCityState extends State<ActiveCity> {
   AssetImage _getBackground() {
     String assetName;
     DateTime localtime;
-    CityData activeCity = globals.activeCity;
 
-    if (activeCity == null) {
+    if (_activeCity == null) {
       // no active city set
       assetName = ASSET_BG_BLACKWHITE;
     } else {
       // get current time if active city
-      localtime = DateTime.parse(getTimeSyntaxLeadingZero(activeCity.localtime)); // '2018-04-27 8:08:00'
+      localtime = DateTime.parse(getTimeSyntaxLeadingZero(_activeCity.localtime)); // '2018-04-27 8:08:00'
 
       if ((localtime.hour > sunriseBegin && localtime.hour < sunriseEnd)
           || (localtime.hour > sunsetBegin  && localtime.hour < sunsetEnd)) {
@@ -78,7 +93,7 @@ class ActiveCityState extends State<ActiveCity> {
       } else {
         // not sunrise/sunset
         // check for day or night
-        activeCity.weather.isDay ? assetName = ASSET_BG_DAYTIME : assetName = ASSET_BG_NIGHTTIKME;
+        _activeCity.weather.isDay ? assetName = ASSET_BG_DAYTIME : assetName = ASSET_BG_NIGHTTIKME;
       }
     }
 
@@ -165,13 +180,10 @@ class ActiveCityState extends State<ActiveCity> {
     var current  = apiData['current'];
     var location = apiData['location'];
 
-    Weather  weather  = mapWeather(current);
-    CityData newCityData = mapCityData(location, weather);
+    Weather  weather     = mapWeather(current);
+    CityData newCityData = mapCityData(location, weather, true, cityToRefresh.id);
 
-    int index = globals.savedCitys.indexOf(cityToRefresh);
-
-    globals.savedCitys[index] = newCityData;
-    globals.activeCity = newCityData;
+    _dbConnection.updateCity(newCityData);
 
     setState(() {
       _activeCity = newCityData;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import 'globals.dart' as globals;
 import 'settings.dart';
@@ -13,16 +14,16 @@ import 'dbConnection.dart';
 void main() => runApp(new MainApp());
 
 class MainApp extends StatefulWidget {
+
+  MainApp() {
+    // globals.con = new DBConnection().init();
+  }
+
   @override
   createState() => MainAppState();
 }
 
 class MainAppState extends State<MainApp> {
-
-  MainAppState() {
-    globals.con = new DBConnection();
-  }
-
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(

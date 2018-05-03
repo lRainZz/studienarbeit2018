@@ -33,16 +33,16 @@ class CityOverviewState extends State<CityOverview> {
     _showSearch    = false;
     _isLoading     = false;
     _noResults     = false;
+
     _dbConnection.getAllCitys().then(
       (cityList) {
         setState(() {
           _cityList = cityList;
+          _activeCity = getActiveCity(cityList);
         });
-
       }
     );
 
-    _activeCity    = getActiveCity(_cityList);
     _apiResults    = new List();
 
     if (_cityList == null) {
@@ -333,6 +333,19 @@ class CityOverviewState extends State<CityOverview> {
     }
   }
 
+  _setAsActive (cityData) {
+    setState(() {
+      if (!(_activeCity == cityData)) {
+        _activeCity = cityData;
+        cityData.setActive(true);
+      } else {
+        _activeCity = null;
+      }
+      // update active state in db
+      _dbConnection.updateCity(cityData);
+    });
+  }
+
   Widget _buildSavedCitys() {
     return new ListView(
       padding: new EdgeInsets.all(16.0),
@@ -348,18 +361,7 @@ class CityOverviewState extends State<CityOverview> {
               onPressed: () => _deleteFromList(cityData),
             ),
             // set state, so that the icon will be updated
-            onTap: () {
-              setState(() {
-                if (!(_activeCity == cityData)) {
-                  _activeCity = cityData;
-                  cityData.setActive(true);
-                } else {
-                  _activeCity = null;
-                }
-                // update active state in db
-                _dbConnection.updateCity(cityData);
-              });
-            }
+            onTap: () => _setAsActive(cityData),
         );
       }).toList(),
     );

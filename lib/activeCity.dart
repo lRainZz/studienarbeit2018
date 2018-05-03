@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 import 'globals.dart' as globals;
 import 'helper.dart';
@@ -24,46 +25,59 @@ class ActiveCityState extends State<ActiveCity> {
 
   // constructor
   ActiveCityState() {
-    _dbConnection = globals.con;
 
-    if (_dbConnection.established()) _refreshData();
+
+    if (globals.con == null) {
+      globals.con = new DBConnection();
+      globals.con.init().then(
+        (param) {
+          _refreshData();
+          _dbConnection = globals.con;
+        }
+      );
+
+    } else _refreshData();
   }
 
-  _refreshData() {
+  _refreshData() async{
     _dbConnection.getAllCitys().then(
       (cityList) {
         setState(() {
           _activeCity = getActiveCity(cityList);
         });
-      }
-    );
 
-    _dbConnection.getSettings().then(
-        (bool) {
-          setState(() {
-            _useImperial = bool;
-          });
-        }
-    );
+        _dbConnection.getSettings().then(
+          (bool) {
+            setState(() {
+              _useImperial = bool;
+            });
 
-    if (_activeCity != null) {
-      // refresh data
-      if (globals.needsUpdate) {
-        String requestURL = 'https://api.apixu.com/v1/current.json?key=' +
-            API_KEY + '=' + _activeCity.name;
+            if (_activeCity != null) {
+              // refresh data
+              if (globals.needsUpdate) {
+                String requestURL = 'https://api.apixu.com/v1/current.json?key=' +
+                    API_KEY + '=' + _activeCity.name;
 
-        http.get(requestURL)
-            .then((response) => response.body)
-            .then(json.decode)
-            .then((apiData) {
-          if (!apiCallHasError(apiData)) {
-            _updateCity(apiData, _activeCity);
+                http.get(requestURL)
+                    .then((response) => response.body)
+                    .then(json.decode)
+                    .then((apiData) {
+                  if (!apiCallHasError(apiData)) {
+                    _updateCity(apiData, _activeCity);
+                  }
+                });
+
+                globals.needsUpdate = false;
+              }
+            }
           }
-        });
-
-        globals.needsUpdate = false;
+        );
       }
-    }
+    );
+
+
+
+
   }
 
   _goToCityOverview() {
@@ -181,7 +195,7 @@ class ActiveCityState extends State<ActiveCity> {
     var location = apiData['location'];
 
     Weather  weather     = mapWeather(current);
-    CityData newCityData = mapCityData(location, weather, true, cityToRefresh.id);
+    CityData newCityData = mapCityData(location, weather, true, cityToRefresh.id());
 
     _dbConnection.updateCity(newCityData);
 

@@ -11,18 +11,16 @@ class DBConnection {
   Database _dbCon;
 
   DBConnection() {
-    _init();
+    // _init();
   }
 
   bool established() {
     return _dbCon != null;
   }
 
-  _init() async {
+  Future<dynamic> init() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     _dbPath = join(documentsDirectory.path, 'rain.db');
-
-    deleteDatabase(_dbPath);
 
     _dbCon = await openDatabase(
       _dbPath,
@@ -67,6 +65,8 @@ class DBConnection {
         await db.execute(sqlBaseSettings);
       }
     );
+
+    return;
   }
 
   Future<bool> getSettings() {
@@ -122,7 +122,7 @@ class DBConnection {
                             'windKph = '        + cityData.weather.windKph.toString() + ', '
                             'windMph = '        + cityData.weather.windMph.toString() + ', '
                             'humidity = '       + cityData.weather.humidity.toString() + ' '
-                            'WHERE rowid = '    + cityData.weather.id.toString();
+                            'WHERE rowid = '    + cityData.weather.id().toString();
 
 
     String sqlCityData =    'UPDATE SavedCitys '
@@ -131,7 +131,7 @@ class DBConnection {
                             'region = "'      + cityData.region + '", '
                             'localtime = "'   + cityData.localtime + '", '
                             'isActive = '     + (cityData.isActive() ? '1' : '0') + ' '
-                            'WHERE rowid = '  + cityData.id.toString();
+                            'WHERE rowid = '  + cityData.id().toString();
 
     await _dbCon.transaction((txn) async{
       await txn.rawUpdate(sqlCityWeather);
@@ -212,7 +212,7 @@ class DBConnection {
   Future<List<CityData>> _loadAllCitys() async {
     List<CityData> _allCitys = new List<CityData>();
 
-    String sql = 'SELECT * FROM SavedCitys';
+    String sql = 'SELECT rowid, * FROM SavedCitys';
 
     List<Map> savedCitysResults = await _dbCon.rawQuery(sql);
     List<Weather> weatherList   = await  _loadAllWeather();
@@ -237,19 +237,22 @@ class DBConnection {
     return _allCitys;
   }
 
-  _getWeatherByID(int id, List<Weather> weatherList) {
+  Weather _getWeatherByID(int id, List<Weather> weatherList) {
+    Weather result;
 
     weatherList.forEach(
       (weather) {
-        if (weather.id == id) return weather;
+        if (weather.id() == id) result = weather;
       }
     );
+
+    return result;
   }
 
   _loadAllWeather() async {
     List<Weather> _allWeather = new List<Weather>();
 
-    String sql = 'SELECT * FROM CityWeather';
+    String sql = 'SELECT rowid, * FROM CityWeather';
 
     List<Map> cityWeatherResults = await _dbCon.rawQuery(sql);
 
@@ -261,7 +264,7 @@ class DBConnection {
           result['tempF'],
           result['feelsLikeC'],
           result['feelsLikeF'],
-          result['isDay'] == '1',
+          result['isDay'] == 1,
           result['condition'],
           result['conditionIcon'],
           result['windDirection'],

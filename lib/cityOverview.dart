@@ -334,15 +334,38 @@ class CityOverviewState extends State<CityOverview> {
   }
 
   _setAsActive (cityData) {
+    CityData _oldActive;
+    bool     _updatePred = false;
+
     setState(() {
-      if (!(_activeCity == cityData)) {
-        _activeCity = cityData;
+
+      // check if there is a new active cityData
+      if (cityData != _activeCity) {
+        // set the ols cityData to inactive
+        _oldActive  = _activeCity;
+
+        // _oldActive can be null when there was no active city, e.g. on first start or deselect
+        if (_oldActive != null) {
+          _oldActive.setActive(false);
+          _updatePred = true;
+        }
+
         cityData.setActive(true);
-      } else {
+        _activeCity = cityData;
+
+      } else if (cityData == _activeCity){
+        // set the current cityData to inactive
+        cityData.setActive(false);
         _activeCity = null;
       }
-      // update active state in db
-      _dbConnection.updateCity(cityData);
+
+      // update active states in db
+      _dbConnection.updateCity(cityData).then(
+        (bool) {
+          // if there was an active predecessor, also update it
+          _updatePred ? _dbConnection.updateCity(_oldActive) : null;
+        }
+      );
     });
   }
 

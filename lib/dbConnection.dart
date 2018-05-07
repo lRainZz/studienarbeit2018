@@ -22,6 +22,8 @@ class DBConnection {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     _dbPath = join(documentsDirectory.path, 'rain.db');
 
+    deleteDatabase(_dbPath);
+
     _dbCon = await openDatabase(
       _dbPath,
       version: 1,
@@ -69,19 +71,20 @@ class DBConnection {
     return;
   }
 
-  Future<bool> getSettings() {
-    return _loadSettings();
+  Future<bool> getSettings() async{
+    return await _loadSettings();
   }
 
   Future<bool> _loadSettings() async{
+
     String sql = 'SELECT * FROM Settings WHERE rowid = 1';
     List<Map> results = await _dbCon.rawQuery(sql);
 
     return results[0]['useImperial'] == 1;
   }
 
-  setSettings(bool useImperial) {
-    _updateSettings(useImperial);
+  setSettings(bool useImperial) async{
+    await _updateSettings(useImperial);
   }
 
   _updateSettings(bool useImperial) async{
@@ -89,8 +92,8 @@ class DBConnection {
     await _dbCon.rawUpdate(sql);
   }
 
-  deleteCity(CityData cityData) {
-    _deleteCityData(cityData);
+  deleteCity(CityData cityData) async{
+    await _deleteCityData(cityData);
   }
 
   _deleteCityData(CityData cityData) async{
@@ -103,8 +106,9 @@ class DBConnection {
     });
   }
 
-  updateCity(CityData cityData) {
-    _updateCityData(cityData);
+  Future<bool> updateCity(CityData cityData) async {
+    await _updateCityData(cityData);
+    return true;
   }
 
   _updateCityData(CityData cityData) async{
@@ -139,13 +143,12 @@ class DBConnection {
     });
   }
 
-  Future<dynamic> setCityData(CityData cityData) {
-    return _insertCity(cityData);
+  Future<dynamic> setCityData(CityData cityData) async{
+    return await _insertCity(cityData);
   }
 
   Future<dynamic> _insertCity(CityData cityData) async{
     var idTuple = new List(2);
-    int idCityData;
 
     String sqlWeatherData = 'INSERT INTO CityWeather('
                             'lastUpdated, '
@@ -199,14 +202,14 @@ class DBConnection {
           }
       );
 
-      idCityData = await txn.rawInsert(sqlCityData).then((newId) {idTuple[1] = newId;});
+      await txn.rawInsert(sqlCityData).then((newId) {idTuple[1] = newId;});
     });
 
     return idTuple;
   }
 
-  Future<List<CityData>> getAllCitys() {
-    return _loadAllCitys();
+  Future<List<CityData>> getAllCitys() async{
+    return await _loadAllCitys();
   }
 
   Future<List<CityData>> _loadAllCitys() async {
@@ -233,7 +236,6 @@ class DBConnection {
         _allCitys.add(cityData);
       }
     );
-
     return _allCitys;
   }
 
@@ -245,7 +247,6 @@ class DBConnection {
         if (weather.id() == id) result = weather;
       }
     );
-
     return result;
   }
 
@@ -278,7 +279,6 @@ class DBConnection {
         _allWeather.add(weather);
       }
     );
-
     return _allWeather;
   }
 }

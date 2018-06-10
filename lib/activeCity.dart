@@ -18,7 +18,7 @@ class ActiveCityState extends State<ActiveCity> {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   CityData     _activeCity;
-  bool         _useImperial;
+  bool         _useImperial = false;
   DBConnection _dbConnection;
 
 

@@ -82,7 +82,7 @@ class DBConnection {
   }
 
   Future<bool> setSettings(bool useImperial) async{
-    await _updateSettings(useImperial);
+    return await _updateSettings(useImperial);
   }
 
   Future<bool>_updateSettings(bool useImperial) async{

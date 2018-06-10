@@ -1,23 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 
-import 'globals.dart' as globals;
 import 'settings.dart';
 import 'cityOverview.dart';
 import 'activeCity.dart';
-import 'dbConnection.dart';
-
-// ===== ===== =====
-// TODO: SQLite database
-// ===== ===== =====
 
 void main() => runApp(new MainApp());
 
 class MainApp extends StatefulWidget {
-
-  MainApp() {
-    // globals.con = new DBConnection().init();
-  }
 
   @override
   createState() => MainAppState();

@@ -8,7 +8,6 @@ const String ASSET_BG_NIGHTTIKME = 'res/img/AppLandScape_night.png';
 const String ASSET_BG_SUNRISE    = 'res/img/AppLandScape_sunrise_vibrant.png';
 const String ASSET_BG_DAYTIME    = 'res/img/AppLandScape_day.png';
 
-// DateTime(year, month, day, hour, minute, second, millisecond,microsecond, false)
 final int sunriseBegin = 5;  //  5 o'clock);
 final int sunriseEnd   = 9;  //  9 o'clock);
 final int sunsetBegin  = 17; // 17 o'clock);
@@ -155,6 +154,7 @@ CityData mapCityData(dynamic cityDataJSON, Weather weather, bool isActive, [int 
   return cityData;
 }
 
+// function for correctiong time format while casting from string to datetime
 String getTimeSyntaxLeadingZero(String timeString) {
   String timePart;
   String datePart;

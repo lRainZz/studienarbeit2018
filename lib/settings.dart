@@ -88,9 +88,12 @@ class SettingsViewState extends State<SettingsView> {
 
   _goBack() {
     // update possible changed options
-    _dbConnection.setSettings(_useImperialUnits);
-    globals.navRefresh = true;
-    Navigator.of(context).pop();
+    _dbConnection.setSettings(_useImperialUnits).then(
+        (bool) {
+          globals.navRefresh = true;
+          Navigator.of(context).pop();
+        }
+    );
   }
 
   @override

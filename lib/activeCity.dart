@@ -3,7 +3,6 @@ import 'package:flutter/rendering.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async';
 
 import 'globals.dart' as globals;
 import 'helper.dart';

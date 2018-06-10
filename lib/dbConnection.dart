@@ -22,8 +22,6 @@ class DBConnection {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     _dbPath = join(documentsDirectory.path, 'rain.db');
 
-    deleteDatabase(_dbPath);
-
     _dbCon = await openDatabase(
       _dbPath,
       version: 1,
@@ -83,13 +81,14 @@ class DBConnection {
     return results[0]['useImperial'] == 1;
   }
 
-  setSettings(bool useImperial) async{
+  Future<bool> setSettings(bool useImperial) async{
     await _updateSettings(useImperial);
   }
 
-  _updateSettings(bool useImperial) async{
+  Future<bool>_updateSettings(bool useImperial) async{
     String sql = 'UPDATE Settings SET useImperial = ' + (useImperial ? '1' : '0') + ' WHERE rowid = 1';
     await _dbCon.rawUpdate(sql);
+    return true;
   }
 
   deleteCity(CityData cityData) async{
